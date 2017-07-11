@@ -45,28 +45,33 @@ static void adiv5_swdp_abort(ADIv5_DP_t *dp, uint32_t abort);
 int adiv5_swdp_scan(void)
 {
 	uint8_t ack;
+	uint8_t retries = 10;
 
 	target_list_free();
 	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
 
 	swdptap_init();
 
-	/* Switch from JTAG to SWD mode */
-	swdptap_seq_out(0xFFFF, 16);
-	for(int i = 0; i < 50; i++)
-		swdptap_bit_out(1);
-	swdptap_seq_out(0xE79E, 16); /* 0b0111100111100111 */
-	for(int i = 0; i < 50; i++)
-		swdptap_bit_out(1);
-	swdptap_seq_out(0, 16);
+	do {
+		/* Switch from JTAG to SWD mode */
+		swdptap_seq_out(0xFFFF, 16);
+		for(int i = 0; i < 50; i++)
+			swdptap_bit_out(1);
+		swdptap_seq_out(0xE79E, 16); /* 0b0111100111100111 */
+		for(int i = 0; i < 50; i++)
+			swdptap_bit_out(1);
+		swdptap_seq_out(0, 16);
 
-	/* Read the SW-DP IDCODE register to syncronise */
-	/* This could be done with adiv_swdp_low_access(), but this doesn't
-	 * allow the ack to be checked here. */
-	swdptap_seq_out(0xA5, 8);
-	ack = swdptap_seq_in(3);
-	if((ack != SWDP_ACK_OK) || swdptap_seq_in_parity(&dp->idcode, 32)) {
-		DEBUG("\n");
+		/* Read the SW-DP IDCODE register to syncronise */
+		/* This could be done with adiv_swdp_low_access(), but this doesn't
+		 * allow the ack to be checked here. */
+		swdptap_seq_out(0xA5, 8);
+		ack = swdptap_seq_in(3);
+	} while(((ack != SWDP_ACK_OK) || swdptap_seq_in_parity(&dp->idcode, 32))
+			&& --retries);
+
+	if(!retries)
+	{
 		free(dp);
 		return -1;
 	}
