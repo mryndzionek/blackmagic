@@ -52,6 +52,7 @@ static bool cmd_targets(void);
 static bool cmd_morse(void);
 static bool cmd_connect_srst(target *t, int argc, const char **argv);
 static bool cmd_hard_srst(void);
+static bool cmd_srst_before_connect(target *t, int argc, const char **argv);
 #ifdef PLATFORM_HAS_POWER_SWITCH
 static bool cmd_target_power(target *t, int argc, const char **argv);
 #endif
@@ -71,6 +72,7 @@ const struct command_s cmd_list[] = {
 	{"morse", (cmd_handler)cmd_morse, "Display morse error message" },
 	{"connect_srst", (cmd_handler)cmd_connect_srst, "Configure connect under SRST: (enable|disable)" },
 	{"hard_srst", (cmd_handler)cmd_hard_srst, "Force a pulse on the hard SRST line - disconnects target" },
+	{"srst_before_connect", (cmd_handler)cmd_srst_before_connect, "Configure a SRST pulse before connect: (enable|disable)" },
 #ifdef PLATFORM_HAS_POWER_SWITCH
 	{"tpwr", (cmd_handler)cmd_target_power, "Supplies power to the target: (enable|disable)"},
 #endif
@@ -84,6 +86,7 @@ const struct command_s cmd_list[] = {
 };
 
 static bool connect_assert_srst;
+static bool connect_pulse_srst;
 #ifdef PLATFORM_HAS_DEBUG
 bool debug_bmp;
 #endif
@@ -161,6 +164,12 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 
 	if(connect_assert_srst)
 		platform_srst_set_val(true); /* will be deasserted after attach */
+	else if(connect_pulse_srst)
+	{
+		platform_srst_set_val(true);
+		for(uint8_t i = 0; i < 200; i--) asm("nop");
+		platform_srst_set_val(false);
+	}
 
 	int devs = -1;
 	volatile struct exception e;
@@ -192,6 +201,12 @@ bool cmd_swdp_scan(void)
 
 	if(connect_assert_srst)
 		platform_srst_set_val(true); /* will be deasserted after attach */
+	else if(connect_pulse_srst)
+	{
+		platform_srst_set_val(true);
+		for(uint8_t i = 0; i < 200; i--) asm("nop");
+		platform_srst_set_val(false);
+	}
 
 	int devs = -1;
 	volatile struct exception e;
@@ -260,6 +275,17 @@ static bool cmd_hard_srst(void)
 	target_list_free();
 	platform_srst_set_val(true);
 	platform_srst_set_val(false);
+	return true;
+}
+
+static bool cmd_srst_before_connect(target *t, int argc, const char **argv)
+{
+	(void)t;
+	if (argc == 1)
+		gdb_outf("Pulse on SRST before connect: %s\n",
+				connect_pulse_srst ? "enabled" : "disabled");
+	else
+		connect_pulse_srst = !strcmp(argv[1], "enable");
 	return true;
 }
 
