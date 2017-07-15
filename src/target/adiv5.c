@@ -390,6 +390,9 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 {
 	volatile uint32_t ctrlstat = 0;
 
+	extern void psoc4_chip_acquire(ADIv5_DP_t *dp);
+	psoc4_chip_acquire(dp);
+
 	adiv5_dp_ref(dp);
 
 	volatile struct exception e;

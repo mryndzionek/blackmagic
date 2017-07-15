@@ -268,6 +268,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	PROBE(lmi_probe);
 	PROBE(kinetis_probe);
 	PROBE(efm32_probe);
+	PROBE(psoc4_probe);
 #undef PROBE
 
 	return true;

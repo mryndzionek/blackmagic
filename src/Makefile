@@ -47,6 +47,7 @@ SRC =			\
 	morse.c		\
 	nrf51.c		\
 	platform.c	\
+	psoc4.c	    \
 	sam3x.c		\
 	sam4l.c	\
 	samd.c		\
